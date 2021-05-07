@@ -4,6 +4,7 @@ export default `
 // This grammar is really basic, but it gets the job done!
 // Builds an AST to be processed by the game server.
 
+epression = function*
  
 function =  _ call: word "(" _ a: (args)? _ ")" _  
 { 
@@ -16,7 +17,7 @@ function =  _ call: word "(" _ a: (args)? _ ")" _
    	}
 } /
 
-_ "[" _ call: word "(" _ a: (args)? _ ")" _ "]" _  
+"[" _ call: word "(" _ a: (args)? _ ")" _ "]"   
 { 
 	const loc = location()
     return {
@@ -28,7 +29,7 @@ _ "[" _ call: word "(" _ a: (args)? _ ")" _ "]" _
 }
 
 
-args = 	a:(arg arg+) _ t:args* {return [{type: "list", args: a.flat()},...t].flat()}/ 
+args = 	a:(arg arg)+ _ t:args* {return [{type: "list", list: a.flat()},...t].flat()}/ 
 
 		a: arg* _ "," _ "," _ t: (args)* 
 { 
@@ -49,7 +50,6 @@ arg = 	f: function {return f} /
 				}
 
 
-word = w:[^\(\),\[\]]+ {return w.join("").trim()} 
-_ = [ \t\n\r]*
-
-`
+word = w:[^\\(\\),\\[\\]]+ {return w.join("").trim()} 
+_ = [ \\t\\n\\r]*
+`;
