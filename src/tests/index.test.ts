@@ -1,4 +1,4 @@
-import { Parser } from "../index";
+import { Context, Parser } from "../index";
 
 const parser = new Parser();
 
@@ -6,6 +6,10 @@ parser.add("add", async (args) => {
   return args.reduce((prev, curr) => {
     return (prev += parseInt(curr, 10));
   }, 0);
+});
+
+parser.add("width", async (args, data) => {
+  return "FOOOOOO!";
 });
 
 test("Create a function and execute an expression", async () => {
@@ -16,6 +20,16 @@ test("Create a function and execute an expression", async () => {
   });
 
   expect(res).toEqual("11");
+});
+
+test("Evaluate a function with no args", async () => {
+  const res = await parser.eval({
+    expr: parser.parse("width()"),
+    data: {},
+    scope: {},
+  });
+
+  expect(res).toEqual("FOOOOOO!");
 });
 
 test("Format a string.", async () => {

@@ -53,8 +53,8 @@ export class Parser {
   subs: Map<string, Sub[]>;
   plugins: Plugin[];
 
-  constructor() {
-    this.parser = peg.generate(grammar);
+  constructor(options?: peg.ParserBuildOptions) {
+    this.parser = peg.generate(grammar, options);
     this.fns = new Map();
     this.subs = new Map();
     this.subs.set("pre", []);
@@ -163,7 +163,7 @@ export class Parser {
           if (ctx.scope[expr.value]) {
             results.push(ctx.scope[expr.value]);
           } else {
-            let output = expr.value;
+            let output = expr.value ? expr.value : ",";
             for (const key in ctx.scope) {
               output = output.replace(new RegExp(key, "gi"), ctx.scope[key]);
             }
@@ -182,7 +182,7 @@ export class Parser {
               for (let arg of expr.args) {
                 args.push(
                   await this.eval({
-                    data: ctx.data,
+                    data: ctx.data || {},
                     scope: ctx.scope,
                     msg: ctx.msg,
                     expr: [arg],
@@ -190,7 +190,9 @@ export class Parser {
                 );
               }
               // Execute it and return the results.
-              results.push(await func(args, ctx.data, ctx.scope));
+              results.push(
+                await func(args.join("").split(","), ctx.data, ctx.scope)
+              );
             }
           } else {
             throw new Error("Unknown function.");
@@ -231,7 +233,7 @@ export class Parser {
               const res = await this.eval({
                 expr: this.parse(expr),
                 scope: {},
-                data: {},
+                data: ctx.data || {},
               });
               workingStr += res;
               expr = "";

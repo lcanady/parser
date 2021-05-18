@@ -2,7 +2,7 @@ The Javascript powered, pluggable Muschcode engine.
 
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
-  - [`string(lists: string, ctx: Context) => Promise<string>`](#stringlists-string-ctx-context--promisestring)
+    - [`string(lists: string, ctx: Context) => Promise<string>`](#stringlists-string-ctx-context--promisestring)
   - [**Functions**](#functions)
     - [`add(name: string, (args: string[], data = {}) => {})`](#addname-string-args-string-data----)
   - [**Substitutions**](#substitutions)
