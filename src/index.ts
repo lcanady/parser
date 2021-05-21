@@ -174,7 +174,7 @@ export class Parser {
           const operator = expr.operator;
 
           // Make sure it's operator exists in the Map...
-          if (operator.type === "word" && this.fns.has(operator.value)) {
+          if (operator.type === "word" && this.fns.has(operator.value.trim())) {
             const func = this.fns.get(operator.value.trim());
             if (func) {
               // evaluate any args
