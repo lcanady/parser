@@ -53,3 +53,17 @@ test("variable scope works.", async () => {
 
   expect(res).toEqual("Hello Foobar!");
 });
+
+test("Blank args return as null or blank", async () => {
+  parser.add("testing", (args) => {
+    return args[1];
+  });
+
+  const res = await parser.eval({
+    expr: parser.parse("testing(1,,3)"),
+    data: {},
+    scope: {},
+  });
+
+  expect(res).toEqual("");
+});

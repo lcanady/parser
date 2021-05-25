@@ -1,6 +1,6 @@
 export default `
 // mushcode Grammar
-// Author: Lemuel Canady, Jr (digibeario@gmail.com)
+// Author: Lemuel Canady, Jr (lem@digibear.io)
 // This grammar is really basic, but it gets the job done!
 // Builds an AST to be processed by the game server.
 
@@ -32,10 +32,12 @@ function =  _ call: word "(" _ a: (args)? _ ")" _
 }
 
 
-args =  a: arg* _ ","_ ","? _ t: (args)* 
+
+
+args =  _ "," _  
 { 
 	const loc = location();
-	return 	[[a,{type: "word", value: null, location: loc}].flat(),t.flat()].flat() 
+	return 	{type: "word", value: null, location: loc} 
 
 }/
     
@@ -52,5 +54,5 @@ arg = 	f: function {return f} /
 
 
 word = w:[^\\(\\),\\[\\]]+ {return w.join("")} 
-_ = [\\t\\n\\r]*
+_ = [ \\t\\n\\r]*
 `;

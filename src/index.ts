@@ -174,8 +174,8 @@ export class Parser {
           const operator = expr.operator;
 
           // Make sure it's operator exists in the Map...
-          if (operator.type === "word" && this.fns.has(operator.value.trim())) {
-            const func = this.fns.get(operator.value.trim());
+          if (operator.type === "word" && this.fns.has(operator.value)) {
+            const func = this.fns.get(operator.value);
             if (func) {
               // evaluate any args
               const args = [];
@@ -191,7 +191,11 @@ export class Parser {
               }
               // Execute it and return the results.
               results.push(
-                await func(args.join("").split(","), ctx.data, ctx.scope)
+                await func(
+                  args.map((arg) => (arg === "," ? null : arg)),
+                  ctx.data,
+                  ctx.scope
+                )
               );
             }
           } else {
@@ -268,3 +272,14 @@ export class Parser {
 }
 
 export default new Parser();
+
+// const parser = new Parser();
+// parser.add("add", (args) => args.reduce((a, b) => (a += parseInt(b)), 0));
+
+// parser
+//   .eval({
+//     expr: parser.parse("add(1,,,2)"),
+//     data: {},
+//     scope: {},
+//   })
+//   .then((res) => console.log(res));
