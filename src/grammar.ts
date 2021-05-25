@@ -4,7 +4,7 @@ export default `
 // This grammar is really basic, but it gets the job done!
 // Builds an AST to be processed by the game server.
 
-epression = results: args* function* args*  {
+epression = results: args*  {
 
 	return results.flat()
 }
@@ -41,7 +41,7 @@ args =  _ "," _
 
 }/
     
-    	a: arg* _ "," _ t: (args)* {return [a.flat(),t.flat()].flat()}  / 
+    	a: arg _ "," _ t: args* {return [a,t].flat()}  / 
 		arg 
 
 
