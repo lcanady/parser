@@ -67,3 +67,11 @@ test("Blank args return as null or blank", async () => {
 
   expect(res).toEqual("");
 });
+
+test("Regex repalcements Work", async () => {
+  parser.addSubs("telnet", {
+    before: "\\*\\*(.*)\\*\\*",
+    after: "%ch$1%cn",
+  });
+  expect(parser.substitute("telnet", "**foob**")).toEqual("%chfoob%cn");
+});

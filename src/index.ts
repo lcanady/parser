@@ -118,7 +118,10 @@ export class Parser {
     listArray.forEach((l) => {
       this.subs
         .get(l)
-        ?.forEach((sub) => (string = string.replace(sub.before, sub.after)));
+        ?.forEach(
+          (sub) =>
+            (string = string.replace(new RegExp(sub.before, "g"), sub.after))
+        );
     });
     return string;
   }
