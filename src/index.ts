@@ -275,14 +275,3 @@ export class Parser {
 }
 
 export default new Parser();
-
-// const parser = new Parser();
-// parser.add("add", (args) => args.reduce((a, b) => (a += parseInt(b)), 0));
-
-// parser
-//   .eval({
-//     expr: parser.parse("add(1,,,2)"),
-//     data: {},
-//     scope: {},
-//   })
-//   .then((res) => console.log(res));

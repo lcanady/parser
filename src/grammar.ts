@@ -41,7 +41,7 @@ args =  _ "," _
 
 }/
     
-    	a: arg _ "," _ t: args* {return [a,t].flat()}  / 
+    	a: arg _ "," _ t: args* {return [a,t.flat()].flat()}  / 
 		arg 
 
 
