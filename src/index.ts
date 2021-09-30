@@ -268,7 +268,19 @@ export class Parser {
       ctx.msg = ctx.msg?.replace(new RegExp(k, "g"), ctx.scope[k]);
     }
 
-    let res = await this.run(ctx);
+    let res = "";
+
+    try {
+      res = await this.eval({
+        msg: ctx.msg,
+        data: ctx.data,
+        scope: ctx.scope,
+        expr: ctx.expr ? ctx.expr : this.parse(ctx.msg || ""),
+      });
+    } catch (error) {
+      res = (await this.run(ctx)) || "";
+    }
+
     res = this.substitute(list, res || "");
     return this.substitute("post", res);
   }

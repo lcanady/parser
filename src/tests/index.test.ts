@@ -68,6 +68,26 @@ test("Blank args return as null or blank", async () => {
   expect(res).toEqual("");
 });
 
+test("Can handle adjacent expressions", () => {
+  parser
+    .eval({
+      expr: parser.parse("[add(2,2)][add(3,3)]"),
+      data: {},
+      scope: {},
+    })
+    .then((data) => expect(data).toEqual("46"));
+});
+
+test("Can evaluate a function without brackets", async () => {
+  expect(
+    await parser.string("telnet", {
+      data: {},
+      scope: {},
+      msg: "add(1,2)",
+    })
+  ).toEqual("3");
+});
+
 test("Regex repalcements Work", async () => {
   parser.addSubs("telnet", {
     before: "\\*\\*(.*)\\*\\*",
