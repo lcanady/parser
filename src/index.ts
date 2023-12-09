@@ -42,7 +42,7 @@ export type Plugin = (parser: Parser) => void | Promise<void>;
 
 export interface Sub {
   before: string | RegExp;
-  after: string;
+  after: string | Function;
   strip?: string;
 }
 
