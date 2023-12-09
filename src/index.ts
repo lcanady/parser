@@ -42,7 +42,7 @@ export type Plugin = (parser: Parser) => void | Promise<void>;
 
 export interface Sub {
   before: string | RegExp;
-  after: string | Function;
+  after: string;
   strip?: string;
 }
 
@@ -160,7 +160,7 @@ export class Parser {
 
     const results = [];
     if (ctx.expr) {
-      for (const expr of ctx.expr) {
+      for (const expr of [...ctx.expr]) {
         if (expr.type === "word") {
           expr.value = expr.value || "";
           if (ctx.scope[expr.value]) {

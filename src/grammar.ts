@@ -7,22 +7,22 @@ export default `
 function =  _ call: word "(" _ a: (args)? _ ")" _  
 { 
    ;
-    return {
+    return [{
         type: "function", 
         operator: {type: "word", value: call},
        
         args: a ? a : []
-    };
+    }];
 } /
 _ "[" _ call: word "(" _ a: (args)? _ ")" _ "]" _  
 { 
    
-    return {
+    return [{
         type: "function", 
         operator: {type: "word", value: call},
        
         args: a ? a : []
-    };
+    }];
 }
 
 args = a: (arg arg+) _ t: args* { 
@@ -47,4 +47,5 @@ w: word {
 
 word = w:[^\\(\\),\\[\\]]+ {return w.join("").trim()} 
 _ = [ \\t\\n\\r]*
+
 `;
