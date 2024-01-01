@@ -11,7 +11,7 @@ export interface Context {
 export type MuFunction = (
   args: any[],
   data: { [key: string]: any },
-  scope: Scope
+  scope: Scope,
 ) => Promise<any>;
 
 export type Scope = { [key: string]: any };
@@ -102,7 +102,7 @@ export class Parser {
       this.subs
         .get(l)
         ?.forEach(
-          (sub) => (string = string.replace(sub.before, sub.strip || ""))
+          (sub) => (string = string.replace(sub.before, sub.strip || "")),
         );
     });
     return string;
@@ -119,8 +119,12 @@ export class Parser {
       this.subs
         .get(l)
         ?.forEach(
-          (sub) =>
-            (string = string.replace(new RegExp(sub.before, "g"), sub.after))
+          (
+            sub,
+          ) => (string = string.replace(
+            new RegExp(sub.before, "g"),
+            sub.after,
+          )),
         );
     });
     return string;
@@ -189,7 +193,7 @@ export class Parser {
                     scope: ctx.scope,
                     msg: ctx.msg,
                     expr: [arg],
-                  })
+                  }),
                 );
               }
               // Execute it and return the results.
@@ -197,8 +201,8 @@ export class Parser {
                 await func(
                   args.map((arg) => (arg === "," ? null : arg)),
                   ctx.data,
-                  ctx.scope
-                )
+                  ctx.scope,
+                ),
               );
             }
           } else {
@@ -259,7 +263,7 @@ export class Parser {
           }
         }
       }
-      return workingStr;
+      return this.substitute("post", workingStr);
     }
   }
 
