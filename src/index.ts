@@ -243,7 +243,7 @@ export class Parser {
             try {
               const res = await this.eval({
                 expr: this.parse(expr),
-                scope: {},
+                scope: ctx.scope,
                 data: ctx.data || {},
               });
               workingStr += res;
