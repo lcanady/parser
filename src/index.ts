@@ -40,9 +40,11 @@ export interface Expression {
 
 export type Plugin = (parser: Parser) => void | Promise<void>;
 
+type SubFunction = (substring: string, ...args: any[]) => string;
+
 export interface Sub {
   before: string | RegExp;
-  after: string;
+  after: string | SubFunction;
   strip?: string;
 }
 
@@ -113,21 +115,27 @@ export class Parser {
    * @param string The string to substitute
    * @returns
    */
-  substitute(list: string, string: string) {
+  substitute(list: string, stringToSubstitute: string): string {
     const listArray = list.toLowerCase().split(" ");
     listArray.forEach((l) => {
-      this.subs
-        .get(l)
-        ?.forEach(
-          (
-            sub,
-          ) => (string = string.replace(
-            new RegExp(sub.before, "g"),
+      this.subs.get(l)?.forEach((sub) => {
+        let regex = sub.before instanceof RegExp
+          ? sub.before
+          : new RegExp(sub.before, "g");
+
+        if (typeof sub.after === "function") {
+          // 'after' is confirmed to be a function, so it's callable
+          stringToSubstitute = stringToSubstitute.replace(
+            regex,
             sub.after,
-          )),
-        );
+          );
+        } else {
+          // 'after' is a string, use it as the replacement string
+          stringToSubstitute = stringToSubstitute.replace(regex, sub.after);
+        }
+      });
     });
-    return string;
+    return stringToSubstitute;
   }
 
   /**
