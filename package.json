@@ -1,6 +1,6 @@
 {
   "name": "@ursamu/parser",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -15,7 +15,8 @@
     "url": "https://github.com/lcanady/parser.git"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "./grammar.peg"
   ],
   "devDependencies": {
     "@types/jest": "^26.0.23",
