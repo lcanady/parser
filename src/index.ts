@@ -1,5 +1,16 @@
-import peg from "pegjs";
-import grammar from "./grammar";
+import { readFileSync } from "fs";
+import peg from "peggy";
+import { LocationRange } from "peggy";
+
+
+class MUSHcodeError extends Error {
+  location: LocationRange;
+  constructor(message: string, location: LocationRange) {
+    super(message);
+    this.name = "MUSHcodeError";
+    this.location = location;
+  }
+}
 
 export interface Context {
   scope: { [key: string]: any };
@@ -18,29 +29,19 @@ export type Scope = { [key: string]: any };
 
 export interface Expression {
   type: string;
-  value: string;
-  operator: {
+  value?: string;
+  operator?: {
     type: string;
-    value: string;
-  };
-  location?: {
-    start: {
-      offset: number;
-      line: number;
-      column: number;
-    };
-    end: {
-      offset: number;
-      line: number;
-      column: number;
+    value: {
+      type: string;
+      value: string;
     };
   };
+  location?: LocationRange;
   args: Array<Expression>;
 }
 
 export type Plugin = (parser: Parser) => void | Promise<void>;
-
-type SubFunction = (substring: string, ...args: any[]) => string;
 
 export interface Sub {
   before: string | RegExp;
@@ -48,254 +49,249 @@ export interface Sub {
   strip?: string;
 }
 
-export class Parser {
-  private parser: peg.Parser;
-  fns: Map<string, MuFunction>;
+export type SubFunction = (substring: string, ...args: any[]) => string;
 
-  subs: Map<string, Sub[]>;
-  plugins: Plugin[];
+export class Parser {
+  private grammar: string;
+  private parser: peg.Parser;
+  private fns: Map<string, MuFunction>;
+  private subs: Map<string, Sub[]>;
+  private plugins: Plugin[];
 
   constructor(options?: peg.ParserBuildOptions) {
-    this.parser = peg.generate(grammar, options);
+    this.grammar = readFileSync("grammar.peg", "utf8");
+    this.parser = peg.generate(this.grammar, {
+      ...options
+    });
     this.fns = new Map();
-    this.subs = new Map();
-    this.subs.set("pre", []);
-    this.subs.set("post", []);
+    this.subs = new Map([["pre", []], ["post", []]]);
     this.plugins = [];
   }
 
-  /**
-   * Add a list of plugins to the parser.
-   * @param plugins A comma seperated list of plugins to add to the parser
-   * @returns
-   */
+  private generateErrorPointer(code: string, line: number, column: number): string {
+    const lines = code.split('\n');
+    const errorLine = lines[line - 1];
+    const pointer = ' '.repeat(column - 1) + '^';
+    return `${errorLine}\n${pointer}`;
+  }
+
   plugin(...plugins: Plugin[]) {
     plugins.forEach((plugin) => plugin(this));
     return this;
   }
 
-  /**
-   * Add a list of substitutions to the parser
-   * @param subs A list of substitutions to add to the parser
-   * @returns
-   */
   addSubs(label: string, ...subs: Sub[]) {
     label = label.toLowerCase();
-    let subArray: Sub[] = [];
-
-    if (this.subs.has(label)) {
-      subArray = this.subs.get(label) || [];
-      this.subs.set(label, [...subArray, ...subs]);
-    } else {
-      this.subs.set(label, [...subs]);
-    }
-
+    this.subs.set(label, [...(this.subs.get(label) || []), ...subs]);
     return this;
   }
 
-  /**
-   * Remove any subs in a string.
-   * @param string The string to strip substitutions from
-   * @returns
-   */
-  stripSubs(list: string, string: string) {
-    const listArray = list.toLowerCase().split(" ");
-    listArray.forEach((l) => {
-      this.subs
-        .get(l)
-        ?.forEach(
-          (sub) => (string = string.replace(sub.before, sub.strip || "")),
-        );
-    });
-    return string;
+  stripSubs(list: string, string: string): string {
+    return list.toLowerCase().split(" ").reduce((str, l) => {
+      const subList = this.subs.get(l) || [];
+      return subList.reduce((s, sub) => 
+        s.replace(sub.before, sub.strip || ""), str);
+    }, string);
   }
 
-  /**
-   * Perform  substitutions on a string.
-   * @param string The string to substitute
-   * @returns
-   */
   substitute(list: string, stringToSubstitute: string): string {
-    const listArray = list.toLowerCase().split(" ");
-    listArray.forEach((l) => {
-      this.subs.get(l)?.forEach((sub) => {
-        let regex = sub.before instanceof RegExp
-          ? sub.before
-          : new RegExp(sub.before, "g");
-
+    return list.toLowerCase().split(" ").reduce((str, l) => {
+      const subList = this.subs.get(l) || [];
+      return subList.reduce((s, sub) => {
+        const regex = sub.before instanceof RegExp ? sub.before : new RegExp(sub.before, "g");
         if (typeof sub.after === "function") {
-          // 'after' is confirmed to be a function, so it's callable
-          stringToSubstitute = stringToSubstitute.replace(
-            regex,
-            sub.after,
-          );
+          return s.replace(regex, (...args: any[]) => {
+            if (typeof sub.after === "function") {
+              return sub.after(args[0], ...args.slice(1));
+            } else {
+              return sub.after;
+            }
+          });
         } else {
-          // 'after' is a string, use it as the replacement string
-          stringToSubstitute = stringToSubstitute.replace(regex, sub.after);
+          return s.replace(regex, sub.after);
         }
-      });
-    });
-    return stringToSubstitute;
+      }, str);
+    }, stringToSubstitute);
   }
 
-  /**
-   * Parse a string for syntax
-   * @param code
-   */
-  parse(code: string) {
+  parse(code: string): Expression[] {
     try {
       return this.parser.parse(code);
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'location' in error && 'message' in error) {
+        const pegError = error as { location: LocationRange; message: string };
+        const errorMessage = `${pegError.message} at line ${pegError.location.start.line}, column ${pegError.location.start.column}`;
+        console.error(errorMessage);
+        console.error(this.generateErrorPointer(code, pegError.location.start.line, pegError.location.start.column));
+      }
       throw error;
     }
   }
 
-  /**
-   * Add a new softcode function to the system
-   * @param name The name of the function
-   * @param func The code to be called when the function
-   * name is matched.
-   */
   add(name: string, func: MuFunction) {
     this.fns.set(name.toLowerCase(), func);
   }
 
-  /**
-   * Evaluate a mushcode AST into a string result.
-   * @param ctx The context object to be passed to th eval function
-   * @returns
-   */
-  async eval(ctx: Context): Promise<string> {
-    // First we need to see what kind of expression we're working with.
-    // If it's a word, then check to see if it has special value in
-    // scope, or if it's just a word.
+  async evaluate(ctx: Context): Promise<string> {
+    if (!ctx.expr) return "";
 
-    const results = [];
-    if (ctx.expr) {
-      for (const expr of [...ctx.expr]) {
-        if (expr.type === "word") {
-          expr.value = expr.value || "";
-          if (ctx.scope[expr.value]) {
-            results.push(ctx.scope[expr.value]);
-          } else {
-            let output = expr.value ? expr.value : ",";
-            for (const key in ctx.scope) {
-              output = output.replace(new RegExp(key, "gi"), ctx.scope[key]);
-            }
-            results.push(output);
-          }
-          // If the expession is a function...
-        } else if (expr.type === "function") {
-          const operator = expr.operator;
-
-          // Make sure it's operator exists in the Map...
-          if (operator.type === "word" && this.fns.has(operator.value)) {
-            const func = this.fns.get(operator.value);
-            if (func) {
-              // evaluate any args
-              const args = [];
-              for (let arg of expr.args) {
-                args.push(
-                  await this.eval({
-                    data: ctx.data || {},
-                    scope: ctx.scope,
-                    msg: ctx.msg,
-                    expr: [arg],
-                  }),
-                );
-              }
-              // Execute it and return the results.
-              results.push(
-                await func(
-                  args.map((arg) => (arg === "," ? null : arg)),
-                  ctx.data,
-                  ctx.scope,
-                ),
-              );
-            }
-          } else {
-            throw new Error("Unknown function.");
-          }
-        } else {
-          throw new Error("Unknown Expression.");
+    const results = await Promise.all(ctx.expr.map(async (expr) => {
+      try {
+        switch (expr.type) {
+          case "word":
+            return this.evaluateWord(expr, ctx);
+          case "function":
+            return this.evaluateFunction(expr, ctx);
+          case "substitution":
+            return this.evaluateSubstitution(expr, ctx);
+          case "string":
+            return expr.value;
+          default:
+            throw new MUSHcodeError(`Unknown expression type: ${expr.type}`, expr.location!);
         }
+      } catch (error) {
+        if (error instanceof MUSHcodeError) {
+          const { start } = error.location;
+          console.error(`Error in expression at line ${start.line}, column ${start.column}: ${error.message}`);
+        }
+        throw error;
       }
+    }));
 
-      return results.join("");
-    }
-
-    return "";
+    return results.join("");
   }
 
-  async run(ctx: Context) {
-    let brackets = 0;
-    let workingStr = "";
+  private evaluateWord(expr: Expression, ctx: Context): string {
+    const value = expr.value || "";
+    if (ctx.scope[value]) return ctx.scope[value];
+    return Object.entries(ctx.scope).reduce(
+      (output, [key, val]) => output.replace(new RegExp(key, "gi"), val),
+      value
+    );
+  }
+
+  private async evaluateFunction(expr: Expression, ctx: Context): Promise<string> {
+    const { operator } = expr;
+    if (operator && operator.type === "word") {
+      const funcName = (typeof operator.value === "string" ? operator.value : operator.value.value).toLowerCase();
+      if (this.fns.has(funcName)) {
+        const func = this.fns.get(funcName);
+        if (func) {
+          const args = await Promise.all((expr.args || []).map(async arg => 
+            arg === null ? null : await this.evaluate({ ...ctx, expr: [arg] })
+          ));
+          const result = await func(args, ctx.data, ctx.scope);
+          return result.toString();
+        }
+      }
+    }
+    throw new MUSHcodeError("Unknown function.", expr.location!);
+  }
+
+  private evaluateSubstitution(expr: Expression, ctx: Context): string {
+    const value = `%${expr.value}`;
+    return ctx.scope[value] || value;
+  }
+
+  async run(ctx: Context): Promise<string | undefined> {
+    if (!ctx.msg) return;
+
+    const str = this.substitute("pre", ctx.msg);
+    let result = "";
     let expr = "";
-    let str = ctx.msg;
-    let start = 0;
+    let brackets = 0;
 
-    if (str) {
-      str = this.substitute("pre", str);
-      for (let i = 0; i < str.length; i++) {
-        if (str[i] === "[") {
-          brackets++;
-          start = start ? start : i;
-          expr += str[i];
-        } else if (str[i] === "]") {
-          if (brackets) brackets--;
-          expr += str[i];
-          // If brackets have zeroed out (No more brackets) and the
-          // iterator have already started - process the
-          if (brackets === 0 && i > 0) {
-            start = i;
-            try {
-              const res = await this.eval({
-                expr: this.parse(expr),
-                scope: ctx.scope,
-                data: ctx.data || {},
-              });
-              workingStr += res;
-              expr = "";
-              // If there's an error, just add the expression to
-              // our output string un-affected.
-            } catch (error) {
-              workingStr += expr;
-              expr = "";
-            }
-          }
-        } else {
-          if (brackets) {
-            expr += [str[i]];
-          } else {
-            workingStr += str[i];
-          }
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === "[") {
+        if (brackets === 0) {
+          result += await this.evaluateUnbracketed(expr, ctx);
+          expr = "";
         }
+        brackets++;
+        expr += str[i];
+      } else if (str[i] === "]") {
+        expr += str[i];
+        brackets--;
+        if (brackets === 0) {
+          result += await this.evaluateExpression(expr, ctx);
+          expr = "";
+        }
+      } else {
+        expr += str[i];
       }
-      return this.substitute("post", workingStr);
+    }
+
+    if (expr) {
+      result += await this.evaluateUnbracketed(expr, ctx);
+    }
+
+    return this.substitute("post", result);
+  }
+
+  private async evaluateExpression(expr: string, ctx: Context): Promise<string> {
+    try {
+      const parsed = this.parse(expr.slice(1, -1)); // Remove brackets
+      const evaluated = await this.evaluate({
+        ...ctx,
+        expr: parsed,
+      });
+      return evaluated;
+    } catch (error) {
+      console.error(`Error evaluating expression: ${expr}`);
+      console.error(error);
+      return expr;
     }
   }
 
-  async string(list: string, ctx: Context) {
-    for (let k in ctx.scope) {
-      ctx.msg = ctx.msg?.replace(new RegExp(k, "g"), ctx.scope[k]);
+  private async evaluateUnbracketed(str: string, ctx: Context): Promise<string> {
+    const functionRegex = /(\w+)\((.*?)\)/g;
+    let lastIndex = 0;
+    let match;
+    let result = "";
+
+    while ((match = functionRegex.exec(str)) !== null) {
+      result += str.slice(lastIndex, match.index);
+      const [fullMatch, funcName, argsString] = match;
+      const args = argsString.split(',').map(arg => arg.trim());
+      
+      if (this.fns.has(funcName.toLowerCase())) {
+        const func = this.fns.get(funcName.toLowerCase());
+        if (func) {
+          const evaluated = await func(args, ctx.data, ctx.scope);
+          result += evaluated.toString();
+        } else {
+          result += fullMatch;
+        }
+      } else {
+        result += fullMatch;
+      }
+
+      lastIndex = functionRegex.lastIndex;
     }
 
-    let res = "";
+    result += str.slice(lastIndex);
+    return this.applyScope(result, ctx.scope);
+  }
 
-    try {
-      res = await this.eval({
-        msg: ctx.msg,
-        data: ctx.data,
-        scope: ctx.scope,
-        expr: ctx.expr ? ctx.expr : this.parse(ctx.msg || ""),
-      });
-    } catch (error) {
-      res = (await this.run(ctx)) || "";
-    }
-
-    res = this.substitute(list, res || "");
-    return this.substitute("post", res);
+  private applyScope(str: string, scope: { [key: string]: any }): string {
+    return Object.entries(scope).reduce(
+      (output, [key, val]) => output.replace(new RegExp(key, "g"), val.toString()),
+      str
+    );
   }
 }
 
 export default new Parser();
+
+const parser = new Parser();
+parser.add("add", async (args) => {
+  return args.reduce((prev, curr) => {
+    return (prev += parseInt(curr, 10));
+  }, 0);
+});
+
+parser.add("width", async (args, data) => {
+  return "FOOOOOO!";
+});
+
+parser.run({ msg: "[add(5,6)][add(2,)]", data: {}, scope: {} }).then(shit => console.log(shit));

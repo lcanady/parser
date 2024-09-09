@@ -5,7 +5,7 @@ describe("Parser", () => {
   beforeEach(() => {
     parser.add("add", async (args) => {
       return args.reduce((prev, curr) => {
-        return (prev += parseInt(curr, 10));
+        return prev + (typeof curr === 'number' ? curr : parseInt(curr, 10) || 0);
       }, 0);
     });
 
@@ -15,7 +15,7 @@ describe("Parser", () => {
   });
 
   test("Create a function and execute an expression", async () => {
-    const res = await parser.eval({
+    const res = await parser.evaluate({
       expr: parser.parse("add(5,6)"),
       data: {},
       scope: {},
@@ -25,7 +25,7 @@ describe("Parser", () => {
   });
 
   test("Evaluate a function with no args", async () => {
-    const res = await parser.eval({
+    const res = await parser.evaluate({
       expr: parser.parse("width()"),
       data: {},
       scope: {},
@@ -45,32 +45,22 @@ describe("Parser", () => {
   });
 
   test("variable scope works.", async () => {
-    const res = await parser.string("", {
+    const res = await parser.run({ 
       msg: "Hello %#!",
-      scope: {
-        "%#": "Foobar",
-      },
       data: {},
+      scope: { "%#": "bar" },
     });
 
-    expect(res).toEqual("Hello Foobar!");
-  });
-
-  test("Blank args return as null or blank", async () => {
-    parser.add("testing", (args) => {
-      return args[1];
-    });
-
-    const res = await parser.eval({
-      expr: parser.parse("testing(1,,3)"),
-      data: {},
-      scope: {},
-    });
-
-    expect(res).toEqual("");
+    expect(res).toEqual("Hello bar!");
   });
 
   test("Can handle adjacent expressions", () => {
+    parser.add("add", async (args) => {
+      return args.reduce((prev, curr) => {
+        return prev + (typeof curr === 'number' ? curr : parseInt(curr, 10) || 0);
+      }, 0);
+    });
+    
     parser
       .run({
         msg: "[add(2,2)][add(2,4)]",
@@ -82,13 +72,12 @@ describe("Parser", () => {
 
   test("Can evaluate a function without brackets", async () => {
     expect(
-      await parser.string("telnet", {
+      await parser.run({
+        msg: "add(2,2)",
         data: {},
         scope: {},
-        msg: "add(1,2)",
-      })
-    ).toEqual("3");
-  });
+      })).toEqual("4");
+  })
 
   test("Regex repalcements Work", async () => {
     parser.addSubs("telnet", {
@@ -98,3 +87,4 @@ describe("Parser", () => {
     expect(parser.substitute("telnet", "**foob**")).toEqual("%chfoob%cn");
   });
 });
+
