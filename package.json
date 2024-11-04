@@ -1,11 +1,11 @@
 {
   "name": "@ursamu/parser",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build && jest",
-    "build": "npx tsc -p tsconfig.json && cp ./src/grammar.peg ./dist/grammar.peg",
+    "build": "npx tsc -p tsconfig.json && cp ./grammar.peg ./dist/grammar.peg",
     "prepublish": "npm run build"
   },
   "keywords": [],
