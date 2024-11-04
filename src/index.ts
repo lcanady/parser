@@ -282,16 +282,3 @@ export class Parser {
 }
 
 export default new Parser();
-
-const parser = new Parser();
-parser.add("add", async (args) => {
-  return args.reduce((prev, curr) => {
-    return (prev += parseInt(curr, 10));
-  }, 0);
-});
-
-parser.add("width", async (args, data) => {
-  return "FOOOOOO!";
-});
-
-parser.run({ msg: "[add(5,6)][add(2,)]", data: {}, scope: {} }).then(shit => console.log(shit));
