@@ -1,6 +1,6 @@
 {
   "name": "@ursamu/parser",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,7 @@
   },
   "files": [
     "dist/",
-    "./grammar.peg"
+    "dist/grammar.peg"
   ],
   "devDependencies": {
     "@types/jest": "^26.0.23",
