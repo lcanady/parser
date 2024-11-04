@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { join } from "path";
 import peg from "peggy";
 import { LocationRange } from "peggy";
 
@@ -59,7 +60,7 @@ export class Parser {
   private plugins: Plugin[];
 
   constructor(options?: peg.ParserBuildOptions) {
-    this.grammar = readFileSync("grammar.peg", "utf8");
+    this.grammar = readFileSync(join(__dirname, "grammar.peg"), "utf8");
     this.parser = peg.generate(this.grammar, {
       ...options
     });

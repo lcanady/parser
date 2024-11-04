@@ -1,0 +1,54 @@
+// MUSHcode Grammar with Uniform AST Structure
+// Lemuel Canady, Jr (lem@digibear.io)
+
+start = expression*
+
+expression = _ e:(function / percent_substitution / string_literal / word) _ {
+    return e;
+}
+
+function = bracket_function / standard_function
+
+bracket_function = "[" _ f:standard_function _ "]" {
+    return f;
+}
+
+standard_function = call:word "(" _ args:arg_list? _ ")" {
+    return {
+        type: "function",
+        operator: {
+            type: "word",
+            value: call
+        },
+        args: args || []
+    };
+}
+
+arg_list = head:arg tail:(_ "," _ arg)* {
+    return [head, ...tail.map(item => item[3])].filter(arg => arg !== undefined);
+}
+
+arg = e:(function / percent_substitution / string_literal / word) { return e; } / "" { return null; }
+
+word = w:[^%\[\](),\s"]+ { 
+    return {
+        type: "word",
+        value: w.join("")
+    };
+}
+
+string_literal = '"' content:([^"]* ('""' [^"]*)*) '"' {
+    return {
+        type: "string",
+        value: content.join("").replace(/""/g, '"')
+    };
+}
+
+percent_substitution = "%" substitution:[a-zA-Z0-9]+ {
+    return {
+        type: "substitution",
+        value: substitution.join("")
+    };
+}
+
+_ = [ \t\n\r]*
